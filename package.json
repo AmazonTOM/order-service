@@ -4,8 +4,9 @@
   "description": "Atom Order Service",
   "main": ".eslintrc.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "nodemon server/index.js"
+    "test": "mocha specs",
+    "server": "nodemon server/index.js",
+    "build:prod": "npm run build:server"
   },
   "repository": {
     "type": "git",
@@ -18,8 +19,11 @@
   },
   "homepage": "https://github.com/theericlau/order-service#readme",
   "dependencies": {
+    "bluebird": "^3.5.1",
+    "body-parser": "^1.18.2",
     "cassandra-driver": "^3.3.0",
     "chai": "^4.1.2",
+    "creditcard-generator": "0.0.7",
     "elasticsearch": "^14.0.0",
     "express": "^4.16.2",
     "faker": "^4.1.0",

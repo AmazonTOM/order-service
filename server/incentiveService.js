@@ -5,9 +5,8 @@ const sendCheckoutToIncentive = order => (
     const incentive = {
       userid: order.userid,
       address: order.address,
-      shipping: order.shipping,
+      cart: order.cart,
     };
-    console.log('hello', incentive);
     if (order) {
       resolve(incentive);
     } else {

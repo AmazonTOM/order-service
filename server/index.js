@@ -1,4 +1,9 @@
 const express = require('express');
+const newrelic = require('newrelic');
+const kue = require('kue');
+const queue = kue.createQueue();
+const { addCartCache, getCartCache } = require('./redisServer');
+
 const { storeOrder, storeCart, generateOrders, generateCart, queryUpdateOrders } = require('../database/index');
 const { sendOrderToInventory } = require('./inventoryService');
 const { sendCheckoutToIncentive } = require('./incentiveService');
@@ -7,6 +12,7 @@ const { queryGetCart } = require('../database/index');
 
 const app = express();
 let orderIdCounter = 1;
+let counter =1;
 
 app.use(bodyParser.json());
 
@@ -22,8 +28,12 @@ app.get('/orders/generatecart', (req, res) => {
 
 
 app.post('/orders/addcart', (req, res) => {
-  return storeCart(req.body)
+  addCartCache(req.body)
+    .then((cacheMessage) => {
+      return storeCart(req.body);
+    })
     .then((success) => {
+      console.log('add cart success', success);
       res.status(200).send(success);
     })
     .catch((error) => {
@@ -31,28 +41,52 @@ app.post('/orders/addcart', (req, res) => {
     });
 });
 
-// app.post('/orders/checkout', (req, res) => {
-//   console.log(req.body);
-//   const checkout = {
-//     userid: req.body.userid,
-//     address: req.body.address,
-//   };
-//   queryGetCart(req.body.userid)
-//     .then((data) => {
-//       // console.log('success', success);
-//       checkout.cart = data;
-//       // console.log(checkout)
-//       sendCheckoutToIncentive(checkout);
-//     })
-//     .then((success) => {
-//       console.log('i fakes new', success);
-//     })
-//   res.send();
-// });
+app.get('/orders/checkout', (req, res) => {
+  const checkout = {
+    userid: req.body.userid,
+    address: req.body.address,
+  };
+// Redis Implementation
+  getCartCache(req.body.userid)
+  .then((response) => {
+    if (response) {
+      checkout.cart = JSON.parse((response));
+      return sendCheckoutToIncentive(checkout);
+    } else {
+      return queryGetCart(req.body.userid)
+      .then((data) => {
+        checkout.cart = data;
+        return sendCheckoutToIncentive(checkout);
+      });
+    }
+  })
+  .then((success) => {
+    res.status(200).send(success);
+  })
+  .catch((error) => {
+    console.log('ierror');
+    res.status(404).send(error);
+  })
+
+// Normal without Cache
+  // queryGetCart(req.body.userid)
+  //   .then((data) => {
+  //     checkout.cart = data;
+  //     // console.log(checkout)
+  //     sendCheckoutToIncentive(checkout);
+  //   })
+  //   .then((success) => {
+  //     res.status(200).send(success);
+  //   })
+  //   .catch((error) => {
+  //     console.log('ierror');
+  //     res.status(404).send(error);
+  //   });
+});
 
 app.post('/orders/submitorder', (req, res) => {
   const order = req.body;
-  res.status(200).send('success');
+  res.send();
   queryGetCart(req.body.userid)
     .then((cart) => {
       order.cart = cart;
@@ -68,7 +102,12 @@ app.post('/orders/submitorder', (req, res) => {
       return sendOrderToInventory(inventoryOrder);
     })
     .then((status) => {
+      // console.log('add cart success', status)
       return queryUpdateOrders(status);
+    })
+    .then((count) => {
+      console.log(counter);
+      counter +=1;
     })
     .catch((error) => {
       res.status(404).send(error);

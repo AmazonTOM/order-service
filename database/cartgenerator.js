@@ -12,7 +12,7 @@ const cartGenerator = (query, client) => {
     arr.push({ query, params: cart });
   }
   client.batch(arr, { prepare: true }).then(success => {
-    if (counter < 1000000) {
+    if (counter < 10000000) {
       cartGenerator(query, client);
     }
     console.log(counter);

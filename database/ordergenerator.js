@@ -7,6 +7,7 @@ const { generateRandomProductList } = require('./generateProductList');
 const { addDocument, initMapping, deleteIndex, initIndex, indexExists } = require('./elasticsearch/elasticSearch');
 
 let counter = 0;
+let orderCounter = 1;
 let ecounter = 0;
 // deleteIndex();
 
@@ -27,6 +28,7 @@ const orderGenerator = (query, client) => {
   // for (let i = 0; i < 150; i++) {
   const recurse = () => {
     const order = {
+      id: orderCounter,
       userid: JSON.parse((Math.random() * 100000000).toFixed(0)),
       date: days[Math.floor(Math.random() * days.length)],
       shippingaddress: faker.address.streetAddress(),
@@ -40,15 +42,16 @@ const orderGenerator = (query, client) => {
       },
       status: [],
     };
+    counter++;
     order.payment.cardnumber = JSON.parse(generator.GenCC(order.payment.cardtype)[0]);
     order.shippingoption = getRandomShippingByDay(order.date);
     // console.log(order);
     arr.push({ query, params: order });
     addDocument(order).then(success => {
       ecounter = ecounter + 1;
-    //   if (ecounter < 10000000) {
-    //     orderGenerator(query,client);
-    //   }
+      if (ecounter < 10000000) {
+        orderGenerator(query,client);
+      }
       console.log(ecounter);
     });
   }
